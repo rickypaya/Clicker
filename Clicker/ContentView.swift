@@ -23,6 +23,7 @@ class GameState: ObservableObject {
     
     // Initialize default upgrades
     private func setupInitialUpgrades() {
+        //tap upgrades increase amount per tap
         tapUpgrades = [
             TapUpgrade(id: 1, name: "Better Beans", baseCost: 20, powerIncrease: 1, owned: 0),
             TapUpgrade(id: 2, name: "Foam Art Skills", baseCost: 200, powerIncrease: 5, owned: 0),
@@ -30,6 +31,7 @@ class GameState: ObservableObject {
             TapUpgrade(id: 4, name: "Secret Ingredient", baseCost: 20000, powerIncrease: 100, owned: 0)
         ]
         
+        //idle upgrades increase amount per second idle
         idleUpgrades = [
             IdleUpgrade(id: 1, name: "Hire Barista", baseCost: 50, coffeesPerSecond: 1, owned: 0),
             IdleUpgrade(id: 2, name: "Espresso Machine", baseCost: 500, coffeesPerSecond: 10, owned: 0),
@@ -38,6 +40,7 @@ class GameState: ObservableObject {
             IdleUpgrade(id: 5, name: "Coffee Factory", baseCost: 500000, coffeesPerSecond: 10000, owned: 0)
         ]
         
+        //multiplier upgrades multiply number of production per tap
         multiplierUpgrades = [
             MultiplierUpgrade(id: 1, name: "Happy Hour", baseCost: 5000, multiplier: 2.0, owned: 0),
             MultiplierUpgrade(id: 2, name: "Premium Beans", baseCost: 50000, multiplier: 5.0, owned: 0),
@@ -46,7 +49,7 @@ class GameState: ObservableObject {
         ]
     }
     
-    // Start idle coin production
+    // Start idle coffee production
     private func startIdleProduction() {
         idleTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { _ in
             self.addIdleCoffees()
@@ -54,7 +57,7 @@ class GameState: ObservableObject {
     }
     
     // Core game actions
-    func tapCoin() {
+    func tapCoffee() {
         let earnedCoffees = coffeesPerTap * globalMultiplier
         coffees += earnedCoffees
     }
@@ -150,28 +153,37 @@ struct MainGameView: View {
     @EnvironmentObject var gameState: GameState
     
     var body: some View {
-        VStack(spacing: 30) {
-            // Stats display
-            StatsView()
+        ZStack {
+            Image("coffee-shop-main")
+                .resizable()
+                .aspectRatio(contentMode: .fill)
+                .ignoresSafeArea()
+                .opacity(0.5)
             
-            Spacer()
-            
-            // Main tap button
-            TapButton()
-            
-            Spacer()
-            
-            // Quick stats
-            HStack(spacing: 20) {
-                StatCard(title: "Per Tap", value: String(format: "%.1f", gameState.coffeesPerTap * gameState.globalMultiplier))
-                StatCard(title: "Per Second", value: String(format: "%.1f", gameState.coffeesPerSecond * gameState.globalMultiplier))
-                StatCard(title: "Multiplier", value: String(format: "%.1fx", gameState.globalMultiplier))
+            VStack(spacing: 30) {
+                // Stats display
+                StatsView()
+                
+                Spacer()
+                
+                // Main tap button
+                TapButton()
+                
+                Spacer()
+                
+                // Quick stats
+                HStack(spacing: 20) {
+                    StatCard(title: "Per Tap", value: String(format: "%.1f", gameState.coffeesPerTap * gameState.globalMultiplier))
+                    StatCard(title: "Per Second", value: String(format: "%.1f", gameState.coffeesPerSecond * gameState.globalMultiplier))
+                    StatCard(title: "Multiplier", value: String(format: "%.1fx", gameState.globalMultiplier))
+                }
+            }
+            .padding()
+            .onReceive(gameState.$coffees) { _ in
+                gameState.updateStats()
             }
         }
-        .padding()
-        .onReceive(gameState.$coffees) { _ in
-            gameState.updateStats()
-        }
+        
     }
 }
 
@@ -197,7 +209,7 @@ struct TapButton: View {
     @State private var isPressed = false
     
     var body: some View {
-        Button(action: { gameState.tapCoin() }) {
+        Button(action: { gameState.tapCoffee() }) {
             Circle()
                 .fill(LinearGradient(
                     gradient: Gradient(colors: [Color.yellow, Color.orange]),
@@ -232,7 +244,7 @@ struct StatCard: View {
                 .fontWeight(.semibold)
         }
         .padding()
-        .background(Color.gray.opacity(0.1))
+        .background(Color.orange.opacity(0.7))
         .cornerRadius(10)
     }
 }
@@ -242,18 +254,28 @@ struct StatCard: View {
 struct UpgradesView: View {
     var body: some View {
         NavigationView {
-            VStack {
-                TabView {
-                    TapUpgradesView()
-                        .tabItem { Text("Tap Power") }
-                    
-                    IdleUpgradesView()
-                        .tabItem { Text("Auto Earn") }
-                    
-                    MultiplierUpgradesView()
-                        .tabItem { Text("Multipliers") }
+            
+            ZStack {
+                Image("coffee-shop-upgrades")
+                    .resizable()
+                    .aspectRatio(contentMode: .fill)
+                    .ignoresSafeArea()
+                    .opacity(0.8)
+                
+                VStack {
+                    TabView {
+                        TapUpgradesView()
+                            .tabItem { Text("Tap Power") }
+                        
+                        IdleUpgradesView()
+                            .tabItem { Text("Auto Earn") }
+                        
+                        MultiplierUpgradesView()
+                            .tabItem { Text("Multipliers") }
+                    }
+                    .tabViewStyle(PageTabViewStyle())
                 }
-                .tabViewStyle(PageTabViewStyle())
+                .padding()
             }
             .navigationTitle("Upgrades")
         }
@@ -361,7 +383,7 @@ struct UpgradeListView: View {
             
             Text(description)
                 .font(.subheadline)
-                .foregroundColor(.secondary)
+                .foregroundColor(.white)
             
             ScrollView {
                 LazyVStack(spacing: 12) {
@@ -402,7 +424,7 @@ struct UpgradeCard: View {
                 Text(formatNumber(upgrade.currentCost))
                     .font(.subheadline)
                     .fontWeight(.semibold)
-                    .foregroundColor(canAfford ? .white : .gray)
+                    .foregroundColor(canAfford ? .white : .black)
                     .padding(.horizontal, 16)
                     .padding(.vertical, 8)
                     .background(canAfford ? Color.blue : Color.gray.opacity(0.3))
@@ -411,7 +433,7 @@ struct UpgradeCard: View {
             .disabled(!canAfford)
         }
         .padding()
-        .background(Color.gray.opacity(0.1))
+        .background(Color.orange.opacity(0.8))
         .cornerRadius(12)
     }
 }
